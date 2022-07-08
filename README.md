@@ -29,7 +29,8 @@ We focus on ZFS 0.8.3 for now.
 Compiling LibZDB currently requires zfs, g++, cmake, and make. On Ubuntu, one may use the following commands to prepare the programming environment for LibZDB.
 
 ```bash
-sudo apt-get install gcc make cmake cmake-curses-gui libzfslinux-dev zfsutils-linux
+sudo apt-get install gcc make cmake cmake-curses-gui \
+  libzfslinux-dev zfsutils-linux
 ```
 
 For Ubuntu 20.04.4, this will install g++ 9.4.0, cmake 3.16.3, make 4.2.1, and zfs 0.8.3.
@@ -52,6 +53,10 @@ git clone https://github.com/lanl-future-campaign/c2-libzdb.git
 cd c2-libzdb
 mkdir build
 cd build
-cmake -DSPL_INCLUDE_DIR=/usr/include/libspl -DZFS_INCLUDE_DIR=/usr/include/libzfs -DZFS_LIBRARY_DIR=/lib -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release ..
+cmake -DSPL_INCLUDE_DIR=/usr/include/libspl \
+-DZFS_INCLUDE_DIR=/usr/include/libzfs \
+-DZFS_LIBRARY_DIR=/lib \
+-DBUILD_SHARED_LIBS=ON \
+-DCMAKE_BUILD_TYPE=Release ..
 make
 ```

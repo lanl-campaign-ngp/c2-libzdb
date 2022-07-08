@@ -50,28 +50,28 @@ find_library(ZFS_LIBRARY zfs HINTS ${ZFS_LIBRARY_DIR})
 
 find_package_handle_standard_args(ZFS DEFAULT_MSG ZFS_INCLUDE
         NVPAIR_LIBRARY ZPOOL_LIBRARY ZFS_LIBRARY)
-mark_as_advanced(ZFS_INCLUDE ZFS_LIBRARY)
+mark_as_advanced(ZFS_INCLUDE NVPAIR_LIBRARY ZPOOL_LIBRARY ZFS_LIBRARY)
 
-if(ZFS_FOUND)
-    if(NOT TARGET nvpair)
+if (ZFS_FOUND)
+    if (NOT TARGET nvpair)
         add_library(nvpair UNKNOWN IMPORTED)
         set_target_properties(nvpair PROPERTIES
                 INTERFACE_INCLUDE_DIRECTORIES "${ZFS_INCLUDE}")
         set_property(TARGET nvpair APPEND PROPERTY
                 IMPORTED_LOCATION "${NVPAIR_LIBRARY}")
-    endif()
-    if(NOT TARGET zpool)
+    endif ()
+    if (NOT TARGET zpool)
         add_library(zpool UNKNOWN IMPORTED)
         set_target_properties(zpool PROPERTIES
                 INTERFACE_INCLUDE_DIRECTORIES "${ZFS_INCLUDE}")
         set_property(TARGET zpool APPEND PROPERTY
                 IMPORTED_LOCATION "${ZPOOL_LIBRARY}")
-    endif()
-    if(NOT TARGET zfs)
+    endif ()
+    if (NOT TARGET zfs)
         add_library(zfs UNKNOWN IMPORTED)
         set_target_properties(zfs PROPERTIES
                 INTERFACE_INCLUDE_DIRECTORIES "${ZFS_INCLUDE}")
         set_property(TARGET zfs APPEND PROPERTY
                 IMPORTED_LOCATION "${ZFS_LIBRARY}")
-    endif()
-endif()
+    endif ()
+endif ()

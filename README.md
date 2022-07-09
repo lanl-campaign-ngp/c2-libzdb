@@ -109,3 +109,9 @@ Indirect blocks:
 
 		segment [0000000000000000, 0000000000000200) size   512
 ```
+
+# References
+
+[ZFS Cheat Sheet by Serge Y. Stroobandt](https://hamwaves.com/zfs/en/zfs.a4.pdf)
+
+[ZFS without Tears](https://www.csparks.com/ZFS%20Without%20Tears.md)

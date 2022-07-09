@@ -44,7 +44,7 @@ cd /usr/include/libzfs/sys
 sudo wget https://raw.githubusercontent.com/openzfs/zfs/zfs-0.8.3/include/sys/zfs_ioctl.h
 ```
 
-# Building
+# Building LibZDB
 
 After all software requirements are installed, one can use the following to configure and build libZDB.
 
@@ -59,4 +59,53 @@ cmake -DSPL_INCLUDE_DIR=/usr/include/libspl \
 -DBUILD_SHARED_LIBS=ON \
 -DCMAKE_BUILD_TYPE=Release ..
 make
+```
+
+# Example Zpool configuration
+
+```bash
+# sudo zpool status
+  pool: mypool
+ state: ONLINE
+  scan: scrub repaired 0B in 0 days 00:00:00 with 0 errors on Sun Apr 10 00:24:01 2022
+config:
+
+	NAME                STATE     READ WRITE CKSUM
+	mypool              ONLINE       0     0     0
+	  mirror-0          ONLINE       0     0     0
+	    /var/dsk/disk1  ONLINE       0     0     0
+	    /var/dsk/disk2  ONLINE       0     0     0
+	  mirror-1          ONLINE       0     0     0
+	    /var/dsk/disk3  ONLINE       0     0     0
+	    /var/dsk/disk4  ONLINE       0     0     0
+
+errors: No known data errors
+```
+
+# Example LibZDB output
+
+```txt
+obj=2 dataset=mypool path=/file1 type=19 bonustype=44
+
+    Object  lvl   iblk   dblk  dsize  dnsize  lsize   %full  type
+         2    1   128K    512    512     512    512  100.00  ZFS plain file (K=inherit) (Z=inherit)
+                                               176   bonus  System attributes
+	dnode flags: USED_BYTES USERUSED_ACCOUNTED USEROBJUSED_ACCOUNTED 
+	dnode maxblkid: 0
+	uid     0
+	gid     0
+	atime	Thu Jan 20 18:47:44 2022
+	mtime	Sat Jan  8 17:48:35 2022
+	ctime	Sat Jan  8 17:48:35 2022
+	crtime	Sat Jan  8 17:48:35 2022
+	gen	10
+	mode	100644
+	size	11
+	parent	34
+	links	1
+	pflags	840800000004
+Indirect blocks:
+               0 L0 0:d400:200 200L/200P F=1 B=10/10 cksum=cce12adf:660b184684:199c9f1c812e:451a630525280
+
+		segment [0000000000000000, 0000000000000200) size   512
 ```

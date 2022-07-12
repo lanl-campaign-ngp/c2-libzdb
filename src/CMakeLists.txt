@@ -30,9 +30,15 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(zdb-srcs libzdb.c)
+set(zdb-srcs
+  libnvpair.c
+  libzdb.c
+  list.c
+  vdev_raidz.c
+  )
 
 add_compile_definitions(_LARGEFILE64_SOURCE)
 
 add_executable(zdb ${zdb-srcs})
+target_include_directories(zdb PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(zdb spl nvpair zpool)

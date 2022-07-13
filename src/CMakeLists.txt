@@ -40,5 +40,5 @@ set(zdb-srcs
 add_compile_definitions(_LARGEFILE64_SOURCE)
 
 add_executable(zdb ${zdb-srcs})
-target_include_directories(zdb PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(zdb PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(zdb spl nvpair zpool)

@@ -25,7 +25,7 @@ typedef struct vdev_info
 typedef struct vdev_tree_info
 {
   char *name;
-  c2list_t vdevs; /* each element is list of path strings */
+  c2list_t vdevs;
 } vdti_t;
 
 void c2_dump_nvlist (nvlist_t *list, int indent, const char *zpool_name,

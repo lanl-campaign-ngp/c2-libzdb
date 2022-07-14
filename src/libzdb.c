@@ -351,19 +351,19 @@ dump_object (objset_t *os, uint64_t object, zpool_vdevs_t *vdevs)
 
   const uint64_t fsize = dump_znode (os, object, bonus, bsize);
 
-  c2list_t list;
-  c2list_init (&list);
+  c2list_t block_list;
+  c2list_init (&block_list);
 
-  dump_indirect (dn, doi.doi_max_offset, &list);
+  dump_indirect (dn, doi.doi_max_offset, &block_list);
+
+  printf ("file size: %zu (%zu blocks)\n", fsize, block_list.count);
 
   /* add extra info to get last chunk's size */
   info_t *extra = malloc (sizeof (info_t));
   extra->file_offset = fsize;
-  c2list_pushback (&list, extra);
+  c2list_pushback (&block_list, extra);
 
-  printf ("file size: %zu\n", fsize);
-
-  for (node_t *node = c2list_head (&list); node && c2list_next (node);
+  for (node_t *node = c2list_head (&block_list); node && c2list_next (node);
        node = c2list_next (node))
     {
       node_t *next_node = c2list_next (node);
@@ -371,14 +371,17 @@ dump_object (objset_t *os, uint64_t object, zpool_vdevs_t *vdevs)
       info_t *info = c2list_get (node);
       info_t *next = c2list_get (next_node);
 
+      zpool_vdev_t *vdev = &vdevs->vdevs[info->vdev];
+
+      const uint64_t actual_size = next->file_offset - info->file_offset;
+
       zio_t zio;
       zio.io_offset = info->offset;
-      zio.io_size = next->file_offset - info->file_offset;
+      zio.io_size = P2ROUNDUP(actual_size, 1ULL << vdev->ashift);
 
       printf ("file_offset=%ld vdev=%ld io_offset=%ld record_size=%ld\n",
-              info->file_offset, info->vdev, info->offset, zio.io_size);
+              info->file_offset, info->vdev, info->offset, actual_size);
 
-      zpool_vdev_t *vdev = &vdevs->vdevs[info->vdev];
       switch (vdev->type)
         {
         case STRIPE:
@@ -391,19 +394,19 @@ dump_object (objset_t *os, uint64_t object, zpool_vdevs_t *vdevs)
         case MIRROR:
           printf ("vdevidx=%ld dev=%s offset=%llu size=%lu\n", info->vdev,
                   vdev->names[0], info->offset + VDEV_LABEL_START_SIZE,
-                  zio.io_size);
+                  actual_size);
 
           break;
         case RAIDZ:
           vdev_raidz_map_alloc (&zio, vdev->ashift, vdev->count, vdev->nparity,
-                                vdev->names);
+                                vdev->names, actual_size);
           break;
         default:
           break;
         }
     }
 
-  c2list_fin (&list, free);
+  c2list_fin (&block_list, free);
 
   dmu_buf_rele (db, FTAG);
 }

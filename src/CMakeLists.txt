@@ -31,11 +31,11 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 set(zdb-srcs
-  libnvpair.c
-  libzdb.c
-  list.c
-  vdev_raidz.c
-  )
+        libnvpair.c
+        libzdb.c
+        list.c
+        vdev_raidz.c
+        )
 
 add_compile_definitions(_LARGEFILE64_SOURCE)
 

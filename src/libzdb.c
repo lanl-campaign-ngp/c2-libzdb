@@ -1,3 +1,7 @@
+#include "libnvpair.h"
+#include "list.h"
+#include "vdev_raidz.h"
+
 #include <sys/dbuf.h>
 #include <sys/dmu.h>
 #include <sys/dmu_objset.h>
@@ -9,31 +13,30 @@
 #include <sys/zfs_znode.h>
 #include <sys/zio.h>
 
-#include "libnvpair.h"
-#include "list.h"
-#include "vdev_raidz.h"
-
 /* a single block of data */
-typedef struct info {
-    uint64_t file_offset;
-    uint64_t vdev;
-    uint64_t offset;
-    uint64_t asize;
+typedef struct info
+{
+  uint64_t file_offset;
+  uint64_t vdev;
+  uint64_t offset;
+  uint64_t asize;
 } info_t;
 
 /* a single vdev within a zpool */
-typedef struct zpool_vdev {
-    char **names;
-    zpool_type_t type;
-    size_t count;
-    size_t nparity;
-    size_t ashift;
+typedef struct zpool_vdev
+{
+  char **names;
+  zpool_type_t type;
+  size_t count;
+  size_t nparity;
+  size_t ashift;
 } zpool_vdev_t;
 
 /* a single zpool */
-typedef struct zpool_vdevs {
-    zpool_vdev_t *vdevs;
-    size_t count;
+typedef struct zpool_vdevs
+{
+  zpool_vdev_t *vdevs;
+  size_t count;
 } zpool_vdevs_t;
 
 static sa_attr_type_t *sa_attr_table = NULL;
@@ -110,17 +113,19 @@ snprintf_blkptr_compact (char *blkbuf, size_t buflen, const blkptr_t *bp,
   blkbuf[0] = '\0';
 
   /* data blocks should only have 1 dva */
-  for (i = 0; i < ndvas; i++) {
-    /* snprintf (blkbuf + strlen (blkbuf), buflen - strlen (blkbuf), */
-    /*           "%llu:%llx:%llx ", (u_longlong_t)DVA_GET_VDEV (&dva[i]), */
-    /*           (u_longlong_t)DVA_GET_OFFSET (&dva[i]), */
-    /*           (u_longlong_t)DVA_GET_ASIZE (&dva[i])); */
-    if (BP_GET_LEVEL(bp) == 0) {
-        info->vdev = DVA_GET_VDEV (&dva[i]);
-        info->offset = DVA_GET_OFFSET (&dva[i]);
-        info->asize = DVA_GET_ASIZE (&dva[i]);
+  for (i = 0; i < ndvas; i++)
+    {
+      /* snprintf (blkbuf + strlen (blkbuf), buflen - strlen (blkbuf), */
+      /*           "%llu:%llx:%llx ", (u_longlong_t)DVA_GET_VDEV (&dva[i]), */
+      /*           (u_longlong_t)DVA_GET_OFFSET (&dva[i]), */
+      /*           (u_longlong_t)DVA_GET_ASIZE (&dva[i])); */
+      if (BP_GET_LEVEL (bp) == 0)
+        {
+          info->vdev = DVA_GET_VDEV (&dva[i]);
+          info->offset = DVA_GET_OFFSET (&dva[i]);
+          info->asize = DVA_GET_ASIZE (&dva[i]);
+        }
     }
-  }
 }
 
 static uint64_t
@@ -172,15 +177,17 @@ print_indirect (blkptr_t *bp, const zbookmark_phys_t *zb,
   /*       } */
   /*   } */
 
-  info_t *info = malloc(sizeof(info_t));
+  info_t *info = malloc (sizeof (info_t));
   snprintf_blkptr_compact (blkbuf, sizeof (blkbuf), bp, info);
-  if (BP_GET_LEVEL(bp) == 0) {
+  if (BP_GET_LEVEL (bp) == 0)
+    {
       info->file_offset = blkid2offset (dnp, bp, zb);
-      c2list_pushback(list, info);
-  }
-  else {
-      free(info);
-  }
+      c2list_pushback (list, info);
+    }
+  else
+    {
+      free (info);
+    }
 
   /* printf ("%s\n", blkbuf); */
 }
@@ -278,8 +285,7 @@ dump_znode (objset_t *os, uint64_t object, void *data, size_t size)
 }
 
 static void
-dump_object (objset_t *os, uint64_t object,
-             zpool_vdevs_t *vdevs)
+dump_object (objset_t *os, uint64_t object, zpool_vdevs_t *vdevs)
 {
   dmu_buf_t *db = NULL;
   dmu_object_info_t doi;
@@ -289,222 +295,241 @@ dump_object (objset_t *os, uint64_t object,
   int error;
 
   error = dmu_object_info (os, object, &doi);
-  if (error) {
-      fprintf(stderr, "dmu_object_info() failed, errno %u\n", error);
+  if (error)
+    {
+      fprintf (stderr, "dmu_object_info() failed, errno %u\n", error);
       return;
-  }
+    }
 
   error = dmu_bonus_hold (os, object, FTAG, &db);
-  if (error) {
-      fprintf(stderr, "dmu_bonus_hold(%lu) failed, errno %u", object, error);
+  if (error)
+    {
+      fprintf (stderr, "dmu_bonus_hold(%lu) failed, errno %u", object, error);
       return;
-  }
+    }
   bonus = db->db_data;
   bsize = db->db_size;
   dn = DB_DNODE ((dmu_buf_impl_t *)db);
 
-  const uint64_t fsize = dump_znode(os, object, bonus, bsize);
+  const uint64_t fsize = dump_znode (os, object, bonus, bsize);
 
   c2list_t list;
-  c2list_init(&list);
+  c2list_init (&list);
 
   dump_indirect (dn, doi.doi_max_offset, &list);
 
   /* add extra info to get last chunk's size */
-  info_t *extra = malloc(sizeof(info_t));
+  info_t *extra = malloc (sizeof (info_t));
   extra->file_offset = fsize;
-  c2list_pushback(&list, extra);
+  c2list_pushback (&list, extra);
 
-  printf("file size: %zu\n", fsize);
+  printf ("file size: %zu\n", fsize);
 
-  for(node_t *node = c2list_head(&list);
-      node && c2list_next(node);
-      node = c2list_next(node)) {
-      node_t *next_node = c2list_next(node);
+  for (node_t *node = c2list_head (&list); node && c2list_next (node);
+       node = c2list_next (node))
+    {
+      node_t *next_node = c2list_next (node);
 
-      info_t *info = c2list_get(node);
-      info_t *next = c2list_get(next_node);
+      info_t *info = c2list_get (node);
+      info_t *next = c2list_get (next_node);
 
       zio_t zio;
       zio.io_offset = info->offset;
       zio.io_size = next->file_offset - info->file_offset;
 
-      printf("file_offset=%ld vdev=%ld io_offset=%ld record_size=%ld\n",
-             info->file_offset, info->vdev, info->offset, zio.io_size);
+      printf ("file_offset=%ld vdev=%ld io_offset=%ld record_size=%ld\n",
+              info->file_offset, info->vdev, info->offset, zio.io_size);
 
       zpool_vdev_t *vdev = &vdevs->vdevs[info->vdev];
-      switch (vdev->type) {
-          case STRIPE:
-              if (vdev->count != 1) {
-                  fprintf(stderr, "Warning: Found multiple devices when only 1 is expected.\n");
-              }
-              /* fallthrough */
-          case MIRROR:
-              printf("vdevidx=%ld dev=%s offset=%llu size=%lu\n",
-                     info->vdev, vdev->names[0], info->offset + VDEV_LABEL_START_SIZE, zio.io_size);
+      switch (vdev->type)
+        {
+        case STRIPE:
+          if (vdev->count != 1)
+            {
+              fprintf (stderr, "Warning: Found multiple devices when only 1 "
+                               "is expected.\n");
+            }
+          /* fallthrough */
+        case MIRROR:
+          printf ("vdevidx=%ld dev=%s offset=%llu size=%lu\n", info->vdev,
+                  vdev->names[0], info->offset + VDEV_LABEL_START_SIZE,
+                  zio.io_size);
 
-              break;
-          case RAIDZ:
-              vdev_raidz_map_alloc(&zio, vdev->ashift, vdev->count, vdev->nparity, vdev->names);
-              break;
-          default:
-              break;
-      }
-  }
+          break;
+        case RAIDZ:
+          vdev_raidz_map_alloc (&zio, vdev->ashift, vdev->count, vdev->nparity,
+                                vdev->names);
+          break;
+        default:
+          break;
+        }
+    }
 
-  c2list_fin(&list, free);
+  c2list_fin (&list, free);
 
   dmu_buf_rele (db, FTAG);
 }
 
 static void
-cleanup_zpool(vdti_t *zpool, int print, int clean) {
-    if (print) {
-        printf("%s\n", zpool->name);
+cleanup_zpool (vdti_t *zpool, int print, int clean)
+{
+  if (print)
+    {
+      printf ("%s\n", zpool->name);
     }
 
-    size_t vdev_index = 0;
-    node_t *vdev_node = c2list_head(&zpool->vdevs);
-    while (vdev_node) {
-        vdi_t *vdev = c2list_get(vdev_node);
+  size_t vdev_index = 0;
+  node_t *vdev_node = c2list_head (&zpool->vdevs);
+  while (vdev_node)
+    {
+      vdi_t *vdev = c2list_get (vdev_node);
 
-        if (print) {
-            printf("    vdev %zu, ashift %zu, count %zu, ",
-                   vdev_index, vdev->ashift, vdev->names.count);
+      if (print)
+        {
+          printf ("    vdev %zu, ashift %zu, count %zu, ", vdev_index,
+                  vdev->ashift, vdev->names.count);
 
-            switch (vdev->type) {
-                case STRIPE:
-                    printf("stripe");
-                    break;
-                case RAIDZ:
-                    printf("raidz %zu", vdev->nparity);
-                    break;
-                case MIRROR:
-                    printf("mirror");
-                    break;
-                default:
-                    printf("unknown");
-                    break;
+          switch (vdev->type)
+            {
+            case STRIPE:
+              printf ("stripe");
+              break;
+            case RAIDZ:
+              printf ("raidz %zu", vdev->nparity);
+              break;
+            case MIRROR:
+              printf ("mirror");
+              break;
+            default:
+              printf ("unknown");
+              break;
             }
 
-            printf("\n");
+          printf ("\n");
         }
 
-        size_t dev_index = 0;
-        node_t *dev_node = c2list_head(&vdev->names);
-        while (dev_node) {
-            char *name = c2list_get(dev_node);
-            if (print) {
-                printf("        dev %zu %s\n", dev_index, name);
+      size_t dev_index = 0;
+      node_t *dev_node = c2list_head (&vdev->names);
+      while (dev_node)
+        {
+          char *name = c2list_get (dev_node);
+          if (print)
+            {
+              printf ("        dev %zu %s\n", dev_index, name);
             }
-            dev_node = c2list_next(dev_node);
-            dev_index++;
+          dev_node = c2list_next (dev_node);
+          dev_index++;
         }
 
-        if (clean) {
-            c2list_fin(&vdev->names, NULL);
+      if (clean)
+        {
+          c2list_fin (&vdev->names, NULL);
         }
 
-        vdev_node = c2list_next(vdev_node);
-        vdev_index++;
+      vdev_node = c2list_next (vdev_node);
+      vdev_index++;
     }
 
-    if (clean) {
-        c2list_fin(&zpool->vdevs, free);
+  if (clean)
+    {
+      c2list_fin (&zpool->vdevs, free);
     }
 
-    free(zpool);
+  free (zpool);
 }
 
 static zpool_vdevs_t *
-dump_cachefile(const char *cachefile, const char *zpool_name)
+dump_cachefile (const char *cachefile, const char *zpool_name)
 {
-	int fd;
-	struct stat64 statbuf;
-	char *buf;
-	nvlist_t *config;
+  int fd;
+  struct stat64 statbuf;
+  char *buf;
+  nvlist_t *config;
 
-	if ((fd = open64(cachefile, O_RDONLY)) < 0) {
-		(void) printf("cannot open '%s': %s\n", cachefile,
-		    strerror(errno));
-		exit(1);
-	}
-
-	if (fstat64(fd, &statbuf) != 0) {
-		(void) printf("failed to stat '%s': %s\n", cachefile,
-		    strerror(errno));
-		exit(1);
-	}
-
-	if ((buf = malloc(statbuf.st_size)) == NULL) {
-		(void) fprintf(stderr, "failed to allocate %llu bytes\n",
-		    (u_longlong_t)statbuf.st_size);
-		exit(1);
-	}
-
-	if (read(fd, buf, statbuf.st_size) != statbuf.st_size) {
-		(void) fprintf(stderr, "failed to read %llu bytes\n",
-		    (u_longlong_t)statbuf.st_size);
-		exit(1);
-	}
-
-	(void) close(fd);
-
-	if (nvlist_unpack(buf, statbuf.st_size, &config, 0) != 0) {
-		(void) fprintf(stderr, "failed to unpack nvlist\n");
-		exit(1);
-	}
-
-	free(buf);
-
-    /* generate list of vdev names here, before nvlist_free */
-
-    vdti_t *zpool = NULL;
-
-    c2_dump_nvlist(config, 0, zpool_name, &zpool, NULL);
-
-    zpool_vdevs_t *vdevs = malloc(sizeof(zpool_vdevs_t));
-    vdevs->count = zpool->vdevs.count;
-    vdevs->vdevs = malloc(sizeof(zpool_vdev_t) * vdevs->count);
-
-    /* copy info from each vdev within the current zpool */
-    size_t vdevidx = 0;
-    for(node_t *zpool_vdev_node = c2list_head(&zpool->vdevs);
-        zpool_vdev_node;
-        zpool_vdev_node = c2list_next(zpool_vdev_node)) {
-        vdi_t *zpool_vdev = c2list_get(zpool_vdev_node);
-
-        /* set up current vdev */
-        zpool_vdev_t *vdev = &vdevs->vdevs[vdevidx];
-        vdev->type = zpool_vdev->type;
-        vdev->count = zpool_vdev->names.count;
-        vdev->names = malloc(sizeof(char *) * vdev->count);
-        vdev->nparity = zpool_vdev->nparity;
-        vdev->ashift = zpool_vdev->ashift;
-
-        /* explicitly copy vdev backing device names from nvpair tree */
-        size_t devidx = 0;
-        for(node_t *node = c2list_head(&zpool_vdev->names);
-            node;
-            node = c2list_next(node)) {
-            const char *path = c2list_get(node);
-            const size_t path_len = strlen(path);
-            const size_t path_size = (path_len + 1) * sizeof(char);
-
-            vdev->names[devidx] = malloc(path_size);
-            snprintf(vdev->names[devidx], path_size, "%s", path);
-
-            devidx++;
-        }
-
-        vdevidx++;
+  if ((fd = open64 (cachefile, O_RDONLY)) < 0)
+    {
+      (void)printf ("cannot open '%s': %s\n", cachefile, strerror (errno));
+      exit (1);
     }
 
-    cleanup_zpool(zpool, 0, 1);
+  if (fstat64 (fd, &statbuf) != 0)
+    {
+      (void)printf ("failed to stat '%s': %s\n", cachefile, strerror (errno));
+      exit (1);
+    }
 
-    nvlist_free(config);
+  if ((buf = malloc (statbuf.st_size)) == NULL)
+    {
+      (void)fprintf (stderr, "failed to allocate %llu bytes\n",
+                     (u_longlong_t)statbuf.st_size);
+      exit (1);
+    }
 
-    return vdevs;
+  if (read (fd, buf, statbuf.st_size) != statbuf.st_size)
+    {
+      (void)fprintf (stderr, "failed to read %llu bytes\n",
+                     (u_longlong_t)statbuf.st_size);
+      exit (1);
+    }
+
+  (void)close (fd);
+
+  if (nvlist_unpack (buf, statbuf.st_size, &config, 0) != 0)
+    {
+      (void)fprintf (stderr, "failed to unpack nvlist\n");
+      exit (1);
+    }
+
+  free (buf);
+
+  /* generate list of vdev names here, before nvlist_free */
+
+  vdti_t *zpool = NULL;
+
+  c2_dump_nvlist (config, 0, zpool_name, &zpool, NULL);
+
+  zpool_vdevs_t *vdevs = malloc (sizeof (zpool_vdevs_t));
+  vdevs->count = zpool->vdevs.count;
+  vdevs->vdevs = malloc (sizeof (zpool_vdev_t) * vdevs->count);
+
+  /* copy info from each vdev within the current zpool */
+  size_t vdevidx = 0;
+  for (node_t *zpool_vdev_node = c2list_head (&zpool->vdevs); zpool_vdev_node;
+       zpool_vdev_node = c2list_next (zpool_vdev_node))
+    {
+      vdi_t *zpool_vdev = c2list_get (zpool_vdev_node);
+
+      /* set up current vdev */
+      zpool_vdev_t *vdev = &vdevs->vdevs[vdevidx];
+      vdev->type = zpool_vdev->type;
+      vdev->count = zpool_vdev->names.count;
+      vdev->names = malloc (sizeof (char *) * vdev->count);
+      vdev->nparity = zpool_vdev->nparity;
+      vdev->ashift = zpool_vdev->ashift;
+
+      /* explicitly copy vdev backing device names from nvpair tree */
+      size_t devidx = 0;
+      for (node_t *node = c2list_head (&zpool_vdev->names); node;
+           node = c2list_next (node))
+        {
+          const char *path = c2list_get (node);
+          const size_t path_len = strlen (path);
+          const size_t path_size = (path_len + 1) * sizeof (char);
+
+          vdev->names[devidx] = malloc (path_size);
+          snprintf (vdev->names[devidx], path_size, "%s", path);
+
+          devidx++;
+        }
+
+      vdevidx++;
+    }
+
+  cleanup_zpool (zpool, 0, 1);
+
+  nvlist_free (config);
+
+  return vdevs;
 }
 
 static int
@@ -550,12 +575,12 @@ dump_path_impl (objset_t *os, uint64_t obj, char *name, zpool_vdevs_t *vdevs)
 
   switch (doi.doi_type)
     {
-    /* case DMU_OT_DIRECTORY_CONTENTS: */
-    /*   if (s != NULL && *(s + 1) != '\0') */
-    /*     return dump_path_impl (os, child_obj, s + 1); */
+      /* case DMU_OT_DIRECTORY_CONTENTS: */
+      /*   if (s != NULL && *(s + 1) != '\0') */
+      /*     return dump_path_impl (os, child_obj, s + 1); */
       /*FALLTHROUGH*/
     case DMU_OT_PLAIN_FILE_CONTENTS:
-        dump_object (os, child_obj, vdevs);
+      dump_object (os, child_obj, vdevs);
       return 0;
     default:
       fprintf (stderr,
@@ -598,33 +623,37 @@ dump_path (char *ds, char *path, zpool_vdevs_t *vdevs)
 }
 
 static void
-cleanup_vdevs(zpool_vdevs_t *vdevs) {
-    for(size_t i = 0; i < vdevs->count; i++) {
-        zpool_vdev_t *vdev = &(vdevs->vdevs[i]);
-        for(size_t j = 0; j < vdev->count; j++) {
-            free(vdev->names[j]);
+cleanup_vdevs (zpool_vdevs_t *vdevs)
+{
+  for (size_t i = 0; i < vdevs->count; i++)
+    {
+      zpool_vdev_t *vdev = &(vdevs->vdevs[i]);
+      for (size_t j = 0; j < vdev->count; j++)
+        {
+          free (vdev->names[j]);
         }
-        free(vdev->names);
+      free (vdev->names);
     }
-    free(vdevs->vdevs);
-    free(vdevs);
+  free (vdevs->vdevs);
+  free (vdevs);
 }
 
 int
 main (int argc, char *argv[])
 {
-    if (argc < 3) {
-        fprintf(stderr, "Syntax: %s zpool filename\n", argv[0]);
-        return 1;
+  if (argc < 3)
+    {
+      fprintf (stderr, "Syntax: %s zpool filename\n", argv[0]);
+      return 1;
     }
 
-    memset (dump_opt, 0, sizeof (dump_opt));
-    kernel_init (FREAD);
-    dump_opt['v'] = 99;
-    zpool_vdevs_t *vdevs = dump_cachefile(ZPOOL_CACHE, argv[1]);
-    dump_path (argv[1], argv[2], vdevs);
-    cleanup_vdevs(vdevs);
-    kernel_fini ();
+  memset (dump_opt, 0, sizeof (dump_opt));
+  kernel_init (FREAD);
+  dump_opt['v'] = 99;
+  zpool_vdevs_t *vdevs = dump_cachefile (ZPOOL_CACHE, argv[1]);
+  dump_path (argv[1], argv[2], vdevs);
+  cleanup_vdevs (vdevs);
+  kernel_fini ();
 
-    return 0;
+  return 0;
 }

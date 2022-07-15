@@ -51,12 +51,22 @@
 #include <sys/zfs_znode.h>
 #include <sys/zio.h>
 
-/* a single block of data */
+/* Information retrieved from a L0 block pointer of a given plain zfs file */
 typedef struct info
 {
+  /* Logical offset of the file */
   uint64_t file_offset;
-  uint64_t vdev;
-  uint64_t offset;
+  /* Logical amount of file data represented by the block. Logical file size
+   * may still be larger than true file size (size reported by `ls`) due to
+   * potential data padding within a block or an ashift */
+  uint64_t file_data;
+  /* Physical amount of file data stored on disk. Less amount of data may be
+   * written to disk due to data compression or holes in a file */
+  uint64_t physical_file_data;
+  uint64_t vdev;   /* Top-level vdev that stored the data */
+  uint64_t offset; /* Offset to the vdev */
+  /* Actual size of data on vdev. On raidz vdevs, this size includes parity
+   * data and will be greater than the physical file size */
   uint64_t asize;
 } info_t;
 
@@ -159,6 +169,8 @@ snprintf_blkptr_compact (char *blkbuf, size_t buflen, const blkptr_t *bp,
       /*           (u_longlong_t)DVA_GET_ASIZE (&dva[i])); */
       if (BP_GET_LEVEL (bp) == 0)
         {
+          info->file_data = BP_GET_LSIZE (bp);
+          info->physical_file_data = BP_IS_HOLE (bp) ? 0 : BP_GET_PSIZE (bp);
           info->vdev = DVA_GET_VDEV (&dva[i]);
           info->offset = DVA_GET_OFFSET (&dva[i]);
           info->asize = DVA_GET_ASIZE (&dva[i]);
@@ -356,12 +368,13 @@ dump_object (objset_t *os, uint64_t object, zpool_vdevs_t *vdevs)
 
   dump_indirect (dn, doi.doi_max_offset, &block_list);
 
-  printf ("file size: %zu (%zu blocks)\n", fsize, block_list.count);
+  printf ("file size: %zu (%zu L0 BPs)\n", fsize, block_list.count);
 
-  /* add extra info to get last chunk's size */
+  /* Add an extra node to the list as an end-of-the-list guard */
   info_t *extra = malloc (sizeof (info_t));
   extra->file_offset = fsize;
   c2list_pushback (&block_list, extra);
+  uint64_t remaining_fsize = fsize;
 
   for (node_t *node = c2list_head (&block_list); node && c2list_next (node);
        node = c2list_next (node))
@@ -373,36 +386,57 @@ dump_object (objset_t *os, uint64_t object, zpool_vdevs_t *vdevs)
 
       zpool_vdev_t *vdev = &vdevs->vdevs[info->vdev];
 
-      const uint64_t actual_size = next->file_offset - info->file_offset;
+      /* If a given block is a hole physical_file_data will be zero and we skip
+       * the block. Otherwise, we bound the record size to never exceed true
+       * file size. THIS ONLY MAKES SENSE WHEN ZFS COMPRESSION IS DISABLED
+       * WHICH IS INDEED THE CASE WE ASSUME. Note that "next->file_offset -
+       * info->file_offset" can be greater than remaining_fsize when *next
+       * happens to be a hole. Yes, zfs may insert a hole even at the very end
+       * of a file! */
+      const uint64_t actual_size
+          = MIN ((MIN (next->file_offset - info->file_offset,
+                       info->physical_file_data)),
+                 remaining_fsize);
+      /* Logical file data may be greater than true file size due to zfs-added
+       * padding within a block or an ashift */
+      remaining_fsize -= MIN (remaining_fsize, info->file_data);
 
-      zio_t zio;
-      zio.io_offset = info->offset;
-      zio.io_size = P2ROUNDUP(actual_size, 1ULL << vdev->ashift);
+      printf ("BP: file_offset=%ld, file_data=%ld, physical_file_data=%ld, "
+              "vdev=%ld, io_offset=%ld, record_size=%ld, "
+              "effective_record_size=%ld\n",
+              info->file_offset, info->file_data, info->physical_file_data,
+              info->vdev, info->offset, info->physical_file_data, actual_size);
 
-      printf ("file_offset=%ld vdev=%ld io_offset=%ld record_size=%ld\n",
-              info->file_offset, info->vdev, info->offset, actual_size);
-
-      switch (vdev->type)
+      if (actual_size != 0)
         {
-        case STRIPE:
-          if (vdev->count != 1)
-            {
-              fprintf (stderr, "Warning: Found multiple devices when only 1 "
-                               "is expected.\n");
-            }
-          /* fallthrough */
-        case MIRROR:
-          printf ("vdevidx=%ld dev=%s offset=%llu size=%lu\n", info->vdev,
-                  vdev->names[0], info->offset + VDEV_LABEL_START_SIZE,
-                  actual_size);
+          zio_t zio;
+          zio.io_offset = info->offset;
+          /* Physical file data is always a multiple of ashift */
+          zio.io_size = info->physical_file_data;
 
-          break;
-        case RAIDZ:
-          vdev_raidz_map_alloc (&zio, vdev->ashift, vdev->count, vdev->nparity,
-                                vdev->names, actual_size);
-          break;
-        default:
-          break;
+          switch (vdev->type)
+            {
+            case STRIPE:
+              if (vdev->count != 1)
+                {
+                  fprintf (stderr,
+                           "Warning: Found multiple devices when only 1 "
+                           "is expected.\n");
+                }
+              /* fallthrough */
+            case MIRROR:
+              printf ("vdevidx=%ld dev=%s offset=%llu size=%lu\n", info->vdev,
+                      vdev->names[0], info->offset + VDEV_LABEL_START_SIZE,
+                      actual_size);
+
+              break;
+            case RAIDZ:
+              vdev_raidz_map_alloc (&zio, vdev->ashift, vdev->count,
+                                    vdev->nparity, vdev->names, actual_size);
+              break;
+            default:
+              break;
+            }
         }
     }
 

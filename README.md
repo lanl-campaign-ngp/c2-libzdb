@@ -18,7 +18,7 @@ XX    XX           XX XX          XX XX           XX       XX XX          XX    
 XXXX XX            XX XX          XX XXXXXXXXXX   XX       XX XX            XXXXXX
 ```
 
-LibZDB is developed as part of C2 under U.S. Government contract 89233218CNA000001 for Los Alamos National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S. Department of Energy/National Nuclear Security Administration. See the accompanying LICENSE.txt for further information. ZDB is a component of OpenZFS, an advanced file system and volume manager which was originally developed for Solaris and is now maintained by the OpenZFS community. Visit [openzfs.org](https://openzfs.org/) for more information on this open source file system.
+LibZDB is developed as part of C2 under U.S. Government contract 89233218CNA000001 for Los Alamos National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S. Department of Energy/National Nuclear Security Administration. See the accompanying LICENSE.txt for further information. ZDB is a component of OpenZFS, an advanced file system and volume manager which was originally developed for Solaris and is now maintained by the OpenZFS community. Visit [openzfs.org](https://openzfs.org/) for more information on this open source file system. LibZDB includes modified OpenZFS ZDB source code released under the CDDL-1.0 license. See the accompanying OPENSOLARIS.LICENSE for more information.
 
 # ZFS
 

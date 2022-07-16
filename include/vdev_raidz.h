@@ -3,7 +3,7 @@
 
 #include <sys/zio.h>
 
-void vdev_raidz_map_alloc (zio_t *zio, uint64_t ashift, uint64_t dcols,
-                           uint64_t nparity, char **backing, uint64_t actual_size);
+void vdev_raidz_map_alloc(zio_t *zio, uint64_t ashift, uint64_t dcols,
+    uint64_t nparity, char **backing, uint64_t actual_size);
 
 #endif

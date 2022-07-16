@@ -28,17 +28,35 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ---
-Language:        Cpp
-BasedOnStyle:    GNU
-DerivePointerAlignment: false
-IncludeBlocks:   Regroup
+Language: Cpp
+BreakBeforeBraces: Stroustrup
+ColumnLimit: 80
+IndentWidth: 8
+UseTab: Always
+AlignAfterOpenBracket: DontAlign
+AlwaysBreakAfterReturnType: AllDefinitions
+ContinuationIndentWidth: 4
+AllowShortIfStatementsOnASingleLine: false
+IndentCaseLabels: false
+AlignTrailingComments: true
+PointerAlignment: Right
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInCStyleCastParentheses: false
+SpacesInContainerLiterals: false
+SpacesInSquareBrackets: false
+SpacesInParentheses: false
+SortIncludes: true
+IncludeBlocks: Regroup
 IncludeCategories:
-  - Regex:           '^<sys.*'
-    Priority:        2
-  - Regex:           '^<.*\.h>'
-    Priority:        3
-  - Regex:           '^<.*'
-    Priority:        3
-  - Regex:           '.*'
-    Priority:        1
+  - Regex: '^<sys.*'
+    Priority: 2
+  - Regex: '^<.*\.h>'
+    Priority: 3
+  - Regex: '^<.*'
+    Priority: 3
+  - Regex: '.*'
+    Priority: 1
 ...

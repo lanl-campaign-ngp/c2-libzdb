@@ -29,25 +29,11 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ---
 Language: Cpp
-BreakBeforeBraces: Stroustrup
 ColumnLimit: 80
 IndentWidth: 8
 UseTab: Always
-AlignAfterOpenBracket: DontAlign
-AlwaysBreakAfterReturnType: AllDefinitions
-ContinuationIndentWidth: 4
 AllowShortIfStatementsOnASingleLine: false
 IndentCaseLabels: false
-AlignTrailingComments: true
-PointerAlignment: Right
-SpaceBeforeAssignmentOperators: true
-SpaceBeforeParens: ControlStatements
-SpaceInEmptyParentheses: false
-SpacesBeforeTrailingComments: 1
-SpacesInCStyleCastParentheses: false
-SpacesInContainerLiterals: false
-SpacesInSquareBrackets: false
-SpacesInParentheses: false
 SortIncludes: true
 IncludeBlocks: Regroup
 IncludeCategories:
@@ -59,4 +45,23 @@ IncludeCategories:
     Priority: 3
   - Regex: '.*'
     Priority: 1
+AlignTrailingComments: true
+AlignAfterOpenBracket: DontAlign
+AlignOperands: DontAlign
+AlwaysBreakAfterReturnType: AllDefinitions
+ContinuationIndentWidth: 4
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: true
+SpaceAroundPointerQualifiers: Default
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyParentheses: false
+SpacesInCStyleCastParentheses: false
+SpacesInContainerLiterals: false
+SpacesInSquareBrackets: false
+SpacesInParentheses: false
+SpacesBeforeTrailingComments: 1
+SpaceAfterCStyleCast: true
+PointerAlignment: Right
 ...

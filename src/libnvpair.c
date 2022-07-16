@@ -61,9 +61,8 @@ c2_dump_nvlist(nvlist_t *list, int indent, const char *zpool_name,
 				if ((key_len == 7) &&
 				    (strncmp(key, "nparity", 7) == 0)) {
 					vdev->nparity = value;
-				}
-				else if ((key_len == 6) &&
-					 (strncmp(key, "ashift", 6) == 0)) {
+				} else if ((key_len == 6) &&
+				    (strncmp(key, "ashift", 6) == 0)) {
 					vdev->ashift = value;
 				}
 			}
@@ -74,8 +73,10 @@ c2_dump_nvlist(nvlist_t *list, int indent, const char *zpool_name,
 			char *value = NULL;
 			nvpair_value_string(elem, &value);
 
-			/* raidz and mirror show up here - if not, the zpool is
-			 * striped */
+			/*
+			 * raidz and mirror show up here - if not, the zpool is
+			 * striped
+			 */
 			if (indent == 3) {
 				if (key_len == 4) {
 					if (strncmp(key, "type", 4) == 0) {
@@ -85,11 +86,9 @@ c2_dump_nvlist(nvlist_t *list, int indent, const char *zpool_name,
 						    (strncmp(value, "raidz",
 							 5) == 0)) {
 							vdev->type = RAIDZ;
-						}
-						else if ((value_len == 6) &&
-							 (strncmp(value,
-							      "mirror",
-							      6) == 0)) {
+						} else if ((value_len == 6) &&
+						    (strncmp(value, "mirror",
+							 6) == 0)) {
 							vdev->type = MIRROR;
 						}
 					}
@@ -109,7 +108,7 @@ c2_dump_nvlist(nvlist_t *list, int indent, const char *zpool_name,
 			break;
 
 		case DATA_TYPE_NVLIST:
-			(void)nvpair_value_nvlist(elem, &nvlist_value);
+			(void) nvpair_value_nvlist(elem, &nvlist_value);
 
 			/* find zpool name */
 			if (indent == 0) {
@@ -138,7 +137,7 @@ c2_dump_nvlist(nvlist_t *list, int indent, const char *zpool_name,
 			break;
 
 		case DATA_TYPE_NVLIST_ARRAY:
-			(void)nvpair_value_nvlist_array(
+			(void) nvpair_value_nvlist_array(
 			    elem, &nvlist_array_value, &count);
 
 			for (i = 0; i < count; i++) {

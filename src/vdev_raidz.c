@@ -76,8 +76,7 @@ vdev_raidz_map_alloc(zio_t *zio, uint64_t ashift, uint64_t dcols,
 		/* Our I/O request doesn't span all child vdevs. */
 		acols = bc;
 		scols = MIN(dcols, roundup(bc, nparity + 1));
-	}
-	else {
+	} else {
 		acols = dcols;
 		scols = dcols;
 	}
@@ -167,7 +166,7 @@ vdev_raidz_map_alloc(zio_t *zio, uint64_t ashift, uint64_t dcols,
 		const uint64_t col_size = MIN(actual_size, rc->rc_size);
 
 		printf("col=%02ld devidx=%02ld dev=%s offset=%lu size=%lu\n", c,
-		    rc->rc_devidx, (char *)backing[rc->rc_devidx],
+		    rc->rc_devidx, (char *) backing[rc->rc_devidx],
 		    rc->rc_offset, col_size);
 
 		actual_size -= col_size;

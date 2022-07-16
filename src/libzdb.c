@@ -55,17 +55,23 @@
 typedef struct info {
 	/* Logical offset of the file */
 	uint64_t file_offset;
-	/* Logical amount of file data represented by the block. Logical file
+	/*
+	 * Logical amount of file data represented by the block. Logical file
 	 * size may still be larger than true file size (size reported by `ls`)
-	 * due to potential data padding within a block or an ashift */
+	 * due to potential data padding within a block or an ashift
+	 */
 	uint64_t file_data;
-	/* Physical amount of file data stored on disk. Less amount of data may
-	 * be written to disk due to data compression or holes in a file */
+	/*
+	 * Physical amount of file data stored on disk. Less amount of data may
+	 * be written to disk due to data compression or holes in a file
+	 */
 	uint64_t physical_file_data;
 	uint64_t vdev;	 /* Top-level vdev that stored the data */
 	uint64_t offset; /* Offset to the vdev */
-	/* Actual size of data on vdev. On raidz vdevs, this size includes
-	 * parity data and will be greater than the physical file size */
+	/*
+	 * Actual size of data on vdev. On raidz vdevs, this size includes
+	 * parity data and will be greater than the physical file size
+	 */
 	uint64_t asize;
 } info_t;
 
@@ -100,7 +106,7 @@ open_objset(const char *path, dmu_objset_type_t type, void *tag, objset_t **osp)
 	if (err != 0) {
 		fprintf(stderr, "failed to own dataset '%s': %s\n", path,
 		    strerror(err));
-		return err;
+		return (err);
 	}
 
 	if (dmu_objset_type(*osp) == DMU_OST_ZFS && !(*osp)->os_encrypted) {
@@ -119,7 +125,7 @@ open_objset(const char *path, dmu_objset_type_t type, void *tag, objset_t **osp)
 		}
 	}
 
-	return 0;
+	return (0);
 }
 
 static void
@@ -146,9 +152,9 @@ snprintf_blkptr_compact(
 
 	if (BP_IS_EMBEDDED(bp)) {
 		sprintf(blkbuf, "EMBEDDED et=%u %llxL/%llxP B=%llu",
-		    (int)BPE_GET_ETYPE(bp), (u_longlong_t)BPE_GET_LSIZE(bp),
-		    (u_longlong_t)BPE_GET_PSIZE(bp),
-		    (u_longlong_t)bp->blk_birth);
+		    (int) BPE_GET_ETYPE(bp), (u_longlong_t) BPE_GET_LSIZE(bp),
+		    (u_longlong_t) BPE_GET_PSIZE(bp),
+		    (u_longlong_t) bp->blk_birth);
 		return;
 	}
 
@@ -189,9 +195,9 @@ blkid2offset(
 	ASSERT(zb->zb_level >= 0);
 
 	return ((zb->zb_blkid << (zb->zb_level *
-				  (dnp->dn_indblkshift - SPA_BLKPTRSHIFT))) *
-		    dnp->dn_datablkszsec
-		<< SPA_MINBLOCKSHIFT);
+		     (dnp->dn_indblkshift - SPA_BLKPTRSHIFT))) *
+		dnp->dn_datablkszsec
+	    << SPA_MINBLOCKSHIFT);
 }
 
 static void
@@ -227,8 +233,7 @@ print_indirect(blkptr_t *bp, const zbookmark_phys_t *zb,
 	if (BP_GET_LEVEL(bp) == 0) {
 		info->file_offset = blkid2offset(dnp, bp, zb);
 		c2list_pushback(list, info);
-	}
-	else {
+	} else {
 		free(info);
 	}
 
@@ -308,18 +313,18 @@ dump_znode(objset_t *os, uint64_t object, void *data, size_t size)
 
 	if (sa_handle_get(os, object, NULL, SA_HDL_PRIVATE, &hdl)) {
 		printf("Failed to get handle for SA znode\n");
-		return 0;
+		return (0);
 	}
 
 	SA_ADD_BULK_ATTR(bulk, idx, sa_attr_table[ZPL_SIZE], NULL, &fsize, 8);
 	if (sa_bulk_lookup(hdl, bulk, idx)) {
 		sa_handle_destroy(hdl);
-		return 0;
+		return (0);
 	}
 
 	/* printf ("\tsize      %llu\n", (u_longlong_t)fsize); */
 	sa_handle_destroy(hdl);
-	return fsize;
+	return (fsize);
 }
 
 static void
@@ -346,7 +351,7 @@ dump_object(objset_t *os, uint64_t object, zpool_vdevs_t *vdevs)
 	}
 	bonus = db->db_data;
 	bsize = db->db_size;
-	dn = DB_DNODE((dmu_buf_impl_t *)db);
+	dn = DB_DNODE((dmu_buf_impl_t *) db);
 
 	const uint64_t fsize = dump_znode(os, object, bonus, bsize);
 
@@ -372,7 +377,8 @@ dump_object(objset_t *os, uint64_t object, zpool_vdevs_t *vdevs)
 
 		zpool_vdev_t *vdev = &vdevs->vdevs[info->vdev];
 
-		/* If a given block is a hole physical_file_data will be
+		/*
+		 * If a given block is a hole physical_file_data will be
 		 * zero and we skip the block. Otherwise, we bound the
 		 * record size to never exceed true file size. THIS ONLY
 		 * MAKES SENSE WHEN ZFS COMPRESSION IS DISABLED WHICH IS
@@ -380,13 +386,15 @@ dump_object(objset_t *os, uint64_t object, zpool_vdevs_t *vdevs)
 		 * "next->file_offset - info->file_offset" can be
 		 * greater than remaining_fsize when *next happens to be
 		 * a hole. Yes, zfs may insert a hole even at the very
-		 * end of a file! */
+		 * end of a file!
+		 */
 		const uint64_t actual_size =
 		    MIN((MIN(next->file_offset - info->file_offset,
 			    info->physical_file_data)),
 			remaining_fsize);
-		/* Logical file data may be greater than true file size
-		 * due to zfs-added padding within a block or an ashift
+		/*
+		 * Logical file data may be greater than true file size due to
+		 * zfs-introduced padding within a block or an ashift.
 		 */
 		remaining_fsize -= MIN(remaining_fsize, info->file_data);
 
@@ -401,42 +409,15 @@ dump_object(objset_t *os, uint64_t object, zpool_vdevs_t *vdevs)
 		if (actual_size != 0) {
 			zio_t zio;
 			zio.io_offset = info->offset;
-			/* Physical file data is always a
-			 * multiple of ashift */
+			/* Physical file data is always a multiple of ashift */
 			zio.io_size = info->physical_file_data;
 
 			switch (vdev->type) {
 			case STRIPE:
 				if (vdev->count != 1) {
-					fprintf(stderr, "Wa"
-							"rn"
-							"in"
-							"g:"
-							" F"
-							"ou"
-							"nd"
-							" m"
-							"ul"
-							"ti"
-							"pl"
-							"e "
-							"de"
-							"vi"
-							"ce"
-							"s "
-							"wh"
-							"en"
-							" o"
-							"nl"
-							"y "
-							"1 "
-							"is"
-							" e"
-							"xp"
-							"ec"
-							"te"
-							"d."
-							"\n");
+					fprintf(stderr,
+					    "Warning: Found multiple devices "
+					    "when only 1 is expected.\n");
 				}
 				/* fallthrough */
 			case MIRROR:
@@ -537,33 +518,33 @@ dump_cachefile(const char *cachefile, const char *zpool_name)
 	nvlist_t *config;
 
 	if ((fd = open64(cachefile, O_RDONLY)) < 0) {
-		(void)printf(
+		(void) printf(
 		    "cannot open '%s': %s\n", cachefile, strerror(errno));
 		exit(1);
 	}
 
 	if (fstat64(fd, &statbuf) != 0) {
-		(void)printf(
+		(void) printf(
 		    "failed to stat '%s': %s\n", cachefile, strerror(errno));
 		exit(1);
 	}
 
 	if ((buf = malloc(statbuf.st_size)) == NULL) {
-		(void)fprintf(stderr, "failed to allocate %llu bytes\n",
-		    (u_longlong_t)statbuf.st_size);
+		(void) fprintf(stderr, "failed to allocate %llu bytes\n",
+		    (u_longlong_t) statbuf.st_size);
 		exit(1);
 	}
 
 	if (read(fd, buf, statbuf.st_size) != statbuf.st_size) {
-		(void)fprintf(stderr, "failed to read %llu bytes\n",
-		    (u_longlong_t)statbuf.st_size);
+		(void) fprintf(stderr, "failed to read %llu bytes\n",
+		    (u_longlong_t) statbuf.st_size);
 		exit(1);
 	}
 
-	(void)close(fd);
+	(void) close(fd);
 
 	if (nvlist_unpack(buf, statbuf.st_size, &config, 0) != 0) {
-		(void)fprintf(stderr, "failed to unpack nvlist\n");
+		(void) fprintf(stderr, "failed to unpack nvlist\n");
 		exit(1);
 	}
 
@@ -615,7 +596,7 @@ dump_cachefile(const char *cachefile, const char *zpool_name)
 
 	nvlist_free(config);
 
-	return vdevs;
+	return (vdevs);
 }
 
 static int
@@ -636,15 +617,15 @@ dump_path_impl(objset_t *os, uint64_t obj, char *name, zpool_vdevs_t *vdevs)
 	if (err != 0) {
 		fprintf(stderr, "failed to lookup %s: %s\n", curpath,
 		    strerror(err));
-		return err;
+		return (err);
 	}
 
 	child_obj = ZFS_DIRENT_OBJ(child_obj);
 	err = sa_buf_hold(os, child_obj, FTAG, &db);
 	if (err != 0) {
 		fprintf(stderr, "failed to get SA dbuf for obj %llu: %s\n",
-		    (u_longlong_t)child_obj, strerror(err));
-		return EINVAL;
+		    (u_longlong_t) child_obj, strerror(err));
+		return (EINVAL);
 	}
 	dmu_object_info_from_db(db, &doi);
 	sa_buf_rele(db, FTAG);
@@ -652,8 +633,8 @@ dump_path_impl(objset_t *os, uint64_t obj, char *name, zpool_vdevs_t *vdevs)
 	if (doi.doi_bonus_type != DMU_OT_SA &&
 	    doi.doi_bonus_type != DMU_OT_ZNODE) {
 		fprintf(stderr, "invalid bonus type %d for obj %llu\n",
-		    doi.doi_bonus_type, (u_longlong_t)child_obj);
-		return EINVAL;
+		    doi.doi_bonus_type, (u_longlong_t) child_obj);
+		return (EINVAL);
 	}
 
 	strlcat(curpath, "/", sizeof(curpath));
@@ -665,16 +646,16 @@ dump_path_impl(objset_t *os, uint64_t obj, char *name, zpool_vdevs_t *vdevs)
 		/*FALLTHROUGH*/
 	case DMU_OT_PLAIN_FILE_CONTENTS:
 		dump_object(os, child_obj, vdevs);
-		return 0;
+		return (0);
 	default:
 		fprintf(stderr,
 		    "object %llu has non-file "
 		    "type %d\n",
-		    (u_longlong_t)obj, doi.doi_type);
+		    (u_longlong_t) obj, doi.doi_type);
 		break;
 	}
 
-	return EINVAL;
+	return (EINVAL);
 }
 
 static int
@@ -686,14 +667,14 @@ dump_path(char *ds, char *path, zpool_vdevs_t *vdevs)
 
 	err = open_objset(ds, DMU_OST_ZFS, FTAG, &os);
 	if (err != 0) {
-		return err;
+		return (err);
 	}
 
 	err = zap_lookup(os, MASTER_NODE_OBJ, ZFS_ROOT_OBJ, 8, 1, &root_obj);
 	if (err != 0) {
 		fprintf(stderr, "can't lookup root znode: %s\n", strerror(err));
 		dmu_objset_disown(os, B_FALSE, FTAG);
-		return EINVAL;
+		return (EINVAL);
 	}
 
 	snprintf(curpath, sizeof(curpath), "dataset=%s path=/", ds);
@@ -723,7 +704,7 @@ main(int argc, char *argv[])
 {
 	if (argc < 3) {
 		fprintf(stderr, "Syntax: %s zpool filename\n", argv[0]);
-		return 1;
+		return (1);
 	}
 
 	memset(dump_opt, 0, sizeof(dump_opt));
@@ -734,5 +715,5 @@ main(int argc, char *argv[])
 	cleanup_vdevs(vdevs);
 	kernel_fini();
 
-	return 0;
+	return (0);
 }
